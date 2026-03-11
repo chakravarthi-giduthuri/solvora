@@ -1,0 +1,32 @@
+name: solvora-backend
+type: web
+git:
+  url: https://github.com/your-org/solvora
+  branch: main
+  build_command: "pip install -r src/backend/requirements.txt"
+  run_command: "uvicorn app.main:app --host 0.0.0.0 --port 8000"
+  workdir: src/backend
+ports:
+  - port: 8000
+    protocol: http
+env:
+  - key: ENVIRONMENT
+    value: production
+  - key: DATABASE_URL
+    secret: DATABASE_URL
+  - key: REDIS_URL
+    secret: REDIS_URL
+  - key: SECRET_KEY
+    secret: SECRET_KEY
+  - key: REDDIT_CLIENT_ID
+    secret: REDDIT_CLIENT_ID
+  - key: REDDIT_CLIENT_SECRET
+    secret: REDDIT_CLIENT_SECRET
+  - key: INTERNAL_API_KEY
+    secret: INTERNAL_API_KEY
+health_checks:
+  - path: /health
+    port: 8000
+    protocol: http
+    initial_delay: 10
+    period: 30

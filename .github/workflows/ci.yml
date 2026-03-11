@@ -1,0 +1,107 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  schedule:
+    # Reddit scrape every 30 minutes
+    - cron: "*/30 * * * *"
+    # Hacker News scrape every 15 minutes
+    - cron: "*/15 * * * *"
+
+jobs:
+  # ------------------------------------------------------------------ #
+  # Backend: install deps and run pytest
+  # ------------------------------------------------------------------ #
+  backend-test:
+    name: Backend Tests
+    runs-on: ubuntu-latest
+    if: github.event_name != 'schedule'
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: src/backend/requirements.txt
+
+      - name: Install backend dependencies
+        run: pip install -r src/backend/requirements.txt
+
+      - name: Run pytest
+        run: pytest src/backend/tests/ -v
+        env:
+          DATABASE_URL: sqlite+aiosqlite:///./test.db
+          ENVIRONMENT: test
+          SECRET_KEY: ci-test-secret-key
+
+  # ------------------------------------------------------------------ #
+  # Frontend: lint and build
+  # ------------------------------------------------------------------ #
+  frontend-lint:
+    name: Frontend Lint & Build
+    runs-on: ubuntu-latest
+    if: github.event_name != 'schedule'
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: src/frontend/package-lock.json
+
+      - name: Install frontend dependencies
+        working-directory: src/frontend
+        run: npm ci
+
+      - name: Lint
+        working-directory: src/frontend
+        run: npm run lint
+
+      - name: Build
+        working-directory: src/frontend
+        run: npm run build
+        env:
+          NEXT_PUBLIC_API_URL: http://localhost:8000/api/v1
+
+  # ------------------------------------------------------------------ #
+  # Scheduled: trigger Reddit scrape every 30 minutes
+  # ------------------------------------------------------------------ #
+  scraper-schedule:
+    name: Reddit Scrape Trigger
+    runs-on: ubuntu-latest
+    if: github.event_name == 'schedule' && github.event.schedule == '*/30 * * * *'
+
+    steps:
+      - name: Trigger Reddit scrape
+        run: |
+          curl -fsSL \
+            -X POST \
+            -H "X-Internal-Api-Key: ${{ secrets.INTERNAL_API_KEY }}" \
+            -H "Content-Type: application/json" \
+            "${{ secrets.BACKEND_URL }}/api/v1/internal/scrape/reddit"
+
+  # ------------------------------------------------------------------ #
+  # Scheduled: trigger Hacker News scrape every 15 minutes
+  # ------------------------------------------------------------------ #
+  hn-scrape-schedule:
+    name: Hacker News Scrape Trigger
+    runs-on: ubuntu-latest
+    if: github.event_name == 'schedule' && github.event.schedule == '*/15 * * * *'
+
+    steps:
+      - name: Trigger Hacker News scrape
+        run: |
+          curl -fsSL \
+            -X POST \
+            -H "X-Internal-Api-Key: ${{ secrets.INTERNAL_API_KEY }}" \
+            -H "Content-Type: application/json" \
+            "${{ secrets.BACKEND_URL }}/api/v1/internal/scrape/hn"
