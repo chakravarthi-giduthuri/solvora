@@ -167,4 +167,42 @@ class BaseScraper(ABC):
             except Exception:
                 pass
 
+        # Auto-prune: keep at most 2000 problems; trigger when total hits 2500
+        if inserted > 0:
+            _prune_old_problems(db_session)
+
         return inserted, skipped
+
+
+_PRUNE_THRESHOLD = 2500
+_PRUNE_KEEP = 2000
+
+
+def _prune_old_problems(db_session: Session) -> int:
+    """Delete the oldest problems when total exceeds 2500, keeping the newest 2000."""
+    try:
+        total = db_session.execute(
+            text("SELECT COUNT(*) FROM problems WHERE is_active = true")
+        ).scalar()
+        if total <= _PRUNE_THRESHOLD:
+            return 0
+        to_delete = total - _PRUNE_KEEP
+        result = db_session.execute(
+            text("""
+                DELETE FROM problems
+                WHERE id IN (
+                    SELECT id FROM problems
+                    WHERE is_active = true
+                    ORDER BY created_at ASC
+                    LIMIT :limit
+                )
+            """),
+            {"limit": to_delete},
+        )
+        db_session.commit()
+        logger.info("Pruned old problems", deleted=result.rowcount, remaining=_PRUNE_KEEP)
+        return result.rowcount
+    except Exception:
+        db_session.rollback()
+        logger.exception("Failed to prune old problems")
+        return 0
