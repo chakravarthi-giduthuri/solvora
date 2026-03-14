@@ -99,7 +99,7 @@ async def list_problems(
         "hasPrev": page > 1,
     }
 
-    await cache_set(cache_key, data, ttl=120)
+    await cache_set(cache_key, data, ttl=600)
     return JSONResponse(content=data)
 
 
@@ -138,7 +138,7 @@ async def autocomplete_problems(
     )
     suggestions = [row[0] for row in result.fetchall()]
     data = {"suggestions": suggestions}
-    await cache_set(cache_key, data, ttl=300)
+    await cache_set(cache_key, data, ttl=900)
     return JSONResponse(content=data)
 
 
@@ -215,7 +215,7 @@ async def get_problem(problem_id: str, db: AsyncSession = Depends(get_db)):
         raise HTTPException(status_code=404, detail="Problem not found")
 
     data = ProblemResponse.model_validate(problem).model_dump(mode='json', by_alias=True)
-    await cache_set(cache_key, data, ttl=300)
+    await cache_set(cache_key, data, ttl=900)
     return JSONResponse(content=data)
 
 

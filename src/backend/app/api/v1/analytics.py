@@ -35,7 +35,7 @@ async def get_dashboard(db: AsyncSession = Depends(get_db)):
 
     from app.services.analytics_service import get_dashboard_data
     data = await get_dashboard_data(db)
-    await cache_set(cache_key, data, ttl=300)
+    await cache_set(cache_key, data, ttl=900)
     return JSONResponse(content=data)
 
 

@@ -25,7 +25,7 @@ async def search_tags(q: str = Query(""), db: AsyncSession = Depends(get_db)):
     result = await db.execute(stmt)
     tags = result.scalars().all()
     data = [{"id": t.id, "name": t.name, "slug": t.slug, "use_count": t.use_count} for t in tags]
-    await cache_set(cache_key, data, ttl=300)
+    await cache_set(cache_key, data, ttl=900)
     return JSONResponse(content=data)
 
 
@@ -42,7 +42,7 @@ async def get_problem_tags(problem_id: str, db: AsyncSession = Depends(get_db)):
     )
     tags = result.scalars().all()
     data = [{"id": t.id, "name": t.name, "slug": t.slug} for t in tags]
-    await cache_set(cache_key, data, ttl=300)
+    await cache_set(cache_key, data, ttl=900)
     return JSONResponse(content=data)
 
 
