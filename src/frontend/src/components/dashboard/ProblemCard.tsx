@@ -63,6 +63,31 @@ function HackerNewsIcon({ className }: { className?: string }) {
   );
 }
 
+function SolvoraIcon({ className }: { className?: string }) {
+  return (
+    <svg
+      viewBox="0 0 20 20"
+      className={cn('fill-current', className)}
+      aria-label="Solvora"
+      role="img"
+    >
+      <rect width="20" height="20" rx="4" fill="#2563EB" />
+      <text
+        x="50%"
+        y="50%"
+        dominantBaseline="central"
+        textAnchor="middle"
+        fontSize="11"
+        fontWeight="bold"
+        fill="white"
+        fontFamily="Arial, sans-serif"
+      >
+        S
+      </text>
+    </svg>
+  );
+}
+
 // ─── Component ────────────────────────────────────────────────────────────────
 
 interface ProblemCardProps {
@@ -125,6 +150,8 @@ export function ProblemCard({ problem, onBookmarkChange }: ProblemCardProps) {
               <span className="shrink-0">
                 {problem.platform === 'reddit' ? (
                   <RedditIcon className="h-5 w-5" />
+                ) : problem.platform === 'user' ? (
+                  <SolvoraIcon className="h-5 w-5" />
                 ) : (
                   <HackerNewsIcon className="h-5 w-5" />
                 )}
