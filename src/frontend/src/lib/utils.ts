@@ -51,6 +51,7 @@ export const SENTIMENT_HEX: Record<Sentiment, string> = {
 export const PLATFORM_LABELS: Record<Platform, string> = {
   reddit: 'Reddit',
   hackernews: 'Hacker News',
+  user: 'Solvora',
 };
 
 export const CATEGORY_COLORS: string[] = [
