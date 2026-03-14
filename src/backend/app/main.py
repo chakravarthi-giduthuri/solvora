@@ -1,3 +1,5 @@
+import asyncio
+import logging
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
@@ -7,9 +9,55 @@ from slowapi.errors import RateLimitExceeded
 from starlette.middleware.base import BaseHTTPMiddleware
 
 from app.core.config import settings
-from app.core.database import engine, Base
+from app.core.database import engine, Base, SessionLocal
 from app.core.limiter import limiter
 from app.api.v1 import problems, solutions, analytics, categories, auth, votes, bookmarks, internal, tags, filter_presets, stream, comments, profiles, leaderboard, export, notifications, admin, submit_problems
+
+logger = logging.getLogger(__name__)
+
+
+async def _scraper_loop() -> None:
+    """Background task: run HN every 15 min, Reddit every 30 min."""
+    hn_interval = 15 * 60      # 15 minutes
+    reddit_interval = 30 * 60  # 30 minutes
+    hn_elapsed = hn_interval       # run immediately on first tick
+    reddit_elapsed = reddit_interval
+    tick = 60  # check every 60 seconds
+
+    while True:
+        await asyncio.sleep(tick)
+        hn_elapsed += tick
+        reddit_elapsed += tick
+
+        if hn_elapsed >= hn_interval:
+            hn_elapsed = 0
+            try:
+                loop = asyncio.get_event_loop()
+                await loop.run_in_executor(None, _scrape_hn)
+            except Exception as exc:
+                logger.error("Scheduled HN scrape failed: %s", exc)
+
+        if reddit_elapsed >= reddit_interval:
+            reddit_elapsed = 0
+            try:
+                loop = asyncio.get_event_loop()
+                await loop.run_in_executor(None, _scrape_reddit)
+            except Exception as exc:
+                logger.error("Scheduled Reddit scrape failed: %s", exc)
+
+
+def _scrape_hn() -> None:
+    from app.scrapers.hn_scraper import run_hn_scrape
+    with SessionLocal() as db:
+        result = run_hn_scrape(db, settings)
+    logger.info("HN scrape: %s", result)
+
+
+def _scrape_reddit() -> None:
+    from app.scrapers.reddit_scraper import run_reddit_scrape
+    with SessionLocal() as db:
+        result = run_reddit_scrape(db, settings)
+    logger.info("Reddit scrape: %s", result)
 
 
 class SecurityHeadersMiddleware(BaseHTTPMiddleware):
@@ -51,7 +99,14 @@ async def _run_migrations(conn):
 async def lifespan(app: FastAPI):
     async with engine.begin() as conn:
         await _run_migrations(conn)
+    # Start background scraper loop (replaces Celery beat)
+    task = asyncio.create_task(_scraper_loop())
     yield
+    task.cancel()
+    try:
+        await task
+    except asyncio.CancelledError:
+        pass
 
 
 def create_app() -> FastAPI:
