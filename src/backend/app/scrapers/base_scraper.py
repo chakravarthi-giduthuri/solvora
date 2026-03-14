@@ -134,4 +134,15 @@ class BaseScraper(ABC):
             raise
 
         logger.info("Posts saved", platform=platform, inserted=inserted, skipped=skipped)
+
+        # Flush the in-memory problems cache so the feed immediately reflects new posts
+        if inserted > 0:
+            try:
+                from app.core.redis_client import _mem_cache
+                keys_to_drop = [k for k in list(_mem_cache.keys()) if k.startswith("problems:")]
+                for k in keys_to_drop:
+                    _mem_cache.pop(k, None)
+            except Exception:
+                pass
+
         return inserted, skipped

@@ -1,9 +1,10 @@
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+import asyncio
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func, update
 from typing import Optional, List
 from pydantic import BaseModel
-from app.core.database import get_db
+from app.core.database import get_db, SessionLocal
 from app.core.security import get_current_user
 from app.models.problem import User, Problem, ProblemReport, Category
 
@@ -25,26 +26,33 @@ async def get_scraper_status(admin: User = Depends(require_admin)):
     }
 
 
+def _run_scraper_sync(source: str) -> None:
+    """Run scraper synchronously in a thread (called via BackgroundTasks)."""
+    from app.core.config import settings
+    with SessionLocal() as db:
+        if source == "reddit":
+            from app.scrapers.reddit_scraper import run_reddit_scrape
+            run_reddit_scrape(db, settings)
+        elif source == "hn":
+            from app.scrapers.hn_scraper import run_hn_scrape
+            run_hn_scrape(db, settings)
+
+
 @router.post("/scrapers/{source}/trigger")
 async def trigger_scraper(
     source: str,
+    background_tasks: BackgroundTasks,
     admin: User = Depends(require_admin),
 ):
     if source not in ("reddit", "hn", "twitter"):
         raise HTTPException(status_code=400, detail="Invalid source")
-    if source == "reddit":
-        from app.scrapers.tasks import run_reddit_scrape_task
-        task = run_reddit_scrape_task.delay()
-    elif source == "hn":
-        from app.scrapers.tasks import run_hn_scrape_task
-        task = run_hn_scrape_task.delay()
-    else:
-        try:
-            from app.scrapers.twitter_scraper import run_twitter_scrape_task
-            task = run_twitter_scrape_task.delay()
-        except ImportError:
-            raise HTTPException(status_code=501, detail="Twitter scraper not configured")
-    return {"task_id": task.id}
+    if source == "twitter":
+        raise HTTPException(status_code=501, detail="Twitter scraper not configured")
+    # Run in thread pool so it doesn't block the event loop
+    background_tasks.add_task(
+        asyncio.get_event_loop().run_in_executor, None, _run_scraper_sync, source
+    )
+    return {"task_id": f"{source}-manual-trigger", "status": "started"}
 
 
 @router.get("/reports")
