@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { getLeaderboard } from '@/lib/api';
 import Link from 'next/link';
+import { BackButton } from '@/components/ui/BackButton';
 
 type LeaderboardType = 'problems' | 'solutions' | 'categories';
 type Period = '24h' | '7d' | '30d';
@@ -23,6 +24,7 @@ export default function LeaderboardPage() {
 
   return (
     <div className="max-w-3xl mx-auto p-6">
+      <BackButton />
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Leaderboard</h1>
         <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">Top content by engagement</p>

@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
 import { getNotificationPrefs, updateNotificationPrefs } from '@/lib/api';
+import { BackButton } from '@/components/ui/BackButton';
 
 export default function NotificationSettingsPage() {
   const { data: session, status } = useSession();
@@ -48,6 +49,7 @@ export default function NotificationSettingsPage() {
 
   return (
     <div className="max-w-lg mx-auto p-6">
+      <BackButton />
       <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-6">Notification Settings</h1>
 
       <div className="space-y-6">

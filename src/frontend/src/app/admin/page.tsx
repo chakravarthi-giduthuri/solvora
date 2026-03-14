@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import apiClient from '@/lib/api';
+import { BackButton } from '@/components/ui/BackButton';
 
 type ScraperInfo = { status: string; note?: string };
 type AdminUser = { id: string; name: string; email: string; is_active: boolean; is_admin: boolean };
@@ -68,6 +69,7 @@ export default function AdminPage() {
 
   return (
     <div className="max-w-5xl mx-auto p-6">
+      <BackButton />
       <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-6">Admin Panel</h1>
 
       <div className="flex gap-1 bg-gray-100 dark:bg-gray-800 rounded-lg p-1 w-fit mb-6">

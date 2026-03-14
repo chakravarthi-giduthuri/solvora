@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { submitProblem } from '@/lib/api';
+import { BackButton } from '@/components/ui/BackButton';
 
 export default function SubmitProblemPage() {
   const { data: session, status } = useSession();
@@ -42,6 +43,7 @@ export default function SubmitProblemPage() {
 
   return (
     <div className="max-w-2xl mx-auto p-6">
+      <BackButton />
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Submit a Problem</h1>
         <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">

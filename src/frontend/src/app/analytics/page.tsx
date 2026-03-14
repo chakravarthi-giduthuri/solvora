@@ -27,6 +27,7 @@ import {
   CartesianGrid,
 } from 'recharts';
 import type { DashboardAnalytics, TopClickedProblem, CategoryDistribution } from '@/types';
+import { BackButton } from '@/components/ui/BackButton';
 
 const CHART_COLORS = [
   '#6366f1', '#8b5cf6', '#ec4899', '#3b82f6',
@@ -446,6 +447,7 @@ export default function AnalyticsPage() {
       <Navbar />
       <main className="flex-1">
         <div className="container mx-auto px-4 py-6">
+          <BackButton />
           <div className="flex items-center gap-2 mb-6">
             <BarChart2 className="h-6 w-6 text-primary" />
             <h1 className="text-2xl font-bold">Analytics</h1>

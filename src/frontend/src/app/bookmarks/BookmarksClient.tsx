@@ -9,6 +9,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
 import { getBookmarks } from '@/lib/api';
 import { useAuthStore } from '@/store/authStore';
+import { BackButton } from '@/components/ui/BackButton';
 
 function BookmarkSkeleton() {
   return (
@@ -64,6 +65,7 @@ export function BookmarksClient() {
 
   return (
     <div>
+      <BackButton />
       {/* Header */}
       <div className="flex items-center gap-2 mb-6">
         <Bookmark className="h-6 w-6 text-primary" />

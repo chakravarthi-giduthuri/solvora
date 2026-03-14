@@ -1,4 +1,6 @@
 import { Metadata } from 'next';
+import Link from 'next/link';
+import { ChevronLeft } from 'lucide-react';
 
 interface ProfilePageProps {
   params: { username: string };
@@ -37,6 +39,10 @@ export default async function ProfilePage({ params }: ProfilePageProps) {
 
   return (
     <div className="max-w-3xl mx-auto p-6">
+      <Link href="/dashboard" className="inline-flex items-center gap-1 text-sm text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors mb-4">
+        <ChevronLeft className="h-4 w-4" />
+        Back
+      </Link>
       {/* Profile Header */}
       <div className="flex items-start gap-4 mb-8">
         <div className="w-16 h-16 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white text-2xl font-bold flex-shrink-0">
