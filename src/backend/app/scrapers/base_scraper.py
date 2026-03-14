@@ -43,6 +43,26 @@ def _infer_sentiment(title: str, body: str) -> str:
     return "neutral"
 
 
+_CATEGORY_KEYWORDS: list[tuple[str, list[str]]] = [
+    ("Technology", ["software", "app", "code", "bug", "computer", "laptop", "phone", "internet", "wifi", "website", "server", "api", "github", "python", "javascript", "programming", "developer", "tech", "hardware", "device"]),
+    ("Health", ["doctor", "hospital", "medicine", "health", "pain", "symptoms", "diagnosis", "anxiety", "depression", "mental health", "therapy", "medication", "illness", "disease", "sick"]),
+    ("Finance", ["money", "bank", "loan", "debt", "credit", "payment", "salary", "tax", "budget", "invest", "financial", "mortgage", "rent", "insurance", "bills"]),
+    ("Relationships", ["relationship", "partner", "boyfriend", "girlfriend", "husband", "wife", "friend", "family", "breakup", "divorce", "dating", "marriage", "parents", "siblings"]),
+    ("Career", ["job", "work", "boss", "coworker", "office", "career", "resume", "interview", "fired", "promotion", "workplace", "employee", "employer", "salary", "remote work"]),
+    ("Legal", ["law", "legal", "lawyer", "court", "sue", "contract", "rights", "police", "crime", "landlord", "tenant", "copyright", "dispute"]),
+    ("Education", ["school", "college", "university", "exam", "degree", "professor", "teacher", "homework", "course", "study", "student", "class", "grade"]),
+]
+
+
+def _infer_category(title: str, body: str) -> str | None:
+    text_lower = (f"{title} {body}").lower()
+    for category, keywords in _CATEGORY_KEYWORDS:
+        for kw in keywords:
+            if kw in text_lower:
+                return category
+    return None
+
+
 def _normalize_title(title: str) -> str:
     """Lowercase and strip for dedup comparison."""
     return title.lower().strip()
@@ -88,18 +108,19 @@ class BaseScraper(ABC):
                 continue
 
             sentiment = _infer_sentiment(title, body)
+            category_val = _infer_category(title, body)
 
             stmt = text(
                 """
                 INSERT INTO problems (
                     id, platform, source_id, title, body, url,
                     author_handle, upvotes, comment_count, subreddit,
-                    sentiment, is_problem, is_active, scraped_at, created_at, updated_at
+                    sentiment, category, is_problem, is_active, scraped_at, created_at, updated_at
                 )
                 VALUES (
                     :id, :platform, :source_id, :title, :body, :url,
                     :author_handle, :upvotes, :comment_count, :subreddit,
-                    :sentiment, false, true, NOW(), NOW(), NOW()
+                    :sentiment, :category, false, true, NOW(), NOW(), NOW()
                 )
                 ON CONFLICT ON CONSTRAINT uq_source_platform DO NOTHING
                 """
@@ -117,6 +138,7 @@ class BaseScraper(ABC):
                 "comment_count": int(post.get("comment_count") or 0),
                 "subreddit": post.get("subreddit") or None,
                 "sentiment": sentiment,
+                "category": category_val,
             })
 
             if result.rowcount > 0:

@@ -87,6 +87,18 @@ async def _run_migrations(conn):
         "ALTER TABLE users ADD COLUMN IF NOT EXISTS avatar_url VARCHAR",
         "ALTER TABLE users ADD COLUMN IF NOT EXISTS bio TEXT",
         "ALTER TABLE users ADD COLUMN IF NOT EXISTS username VARCHAR",
+        # Seed default categories
+        """
+        INSERT INTO categories (id, name, slug) VALUES
+          (gen_random_uuid()::text, 'Technology', 'technology'),
+          (gen_random_uuid()::text, 'Health', 'health'),
+          (gen_random_uuid()::text, 'Finance', 'finance'),
+          (gen_random_uuid()::text, 'Relationships', 'relationships'),
+          (gen_random_uuid()::text, 'Career', 'career'),
+          (gen_random_uuid()::text, 'Legal', 'legal'),
+          (gen_random_uuid()::text, 'Education', 'education')
+        ON CONFLICT (slug) DO NOTHING
+        """,
     ]
     for sql in migrations:
         try:

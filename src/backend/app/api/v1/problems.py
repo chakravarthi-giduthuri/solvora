@@ -53,7 +53,24 @@ async def list_problems(
     if platform:
         filters.append(Problem.platform == platform)
     if category:
-        filters.append(Problem.category == category)
+        from app.models.problem import Category as CategoryModel
+        # Resolve slug → name so we can match Problem.category (stored as name)
+        cat_row = await db.execute(
+            select(CategoryModel.name).where(
+                or_(CategoryModel.slug == category, CategoryModel.name.ilike(category))
+            ).limit(1)
+        )
+        cat_name = cat_row.scalar_one_or_none()
+        if cat_name:
+            filters.append(func.lower(Problem.category) == cat_name.lower())
+        else:
+            # Fall back: match against whatever was passed (slug or name)
+            filters.append(
+                or_(
+                    func.lower(Problem.category) == category.lower(),
+                    Problem.category.ilike(category),
+                )
+            )
     if sentiment:
         filters.append(Problem.sentiment == sentiment)
     if date_from:
