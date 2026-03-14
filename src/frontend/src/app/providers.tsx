@@ -1,10 +1,22 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { SessionProvider } from 'next-auth/react';
+import { SessionProvider, useSession } from 'next-auth/react';
 import { ToastProvider, ToastViewport } from '@/components/ui/toast';
 import { ThemeProvider } from '@/components/layout/ThemeProvider';
+import { setApiToken } from '@/lib/api';
+
+// Syncs the NextAuth session token (from Google OAuth or credentials) into
+// apiClient so every axios request includes the correct Authorization header.
+function AuthSync() {
+  const { data: session } = useSession();
+  useEffect(() => {
+    const token = (session as { accessToken?: string } | null)?.accessToken ?? null;
+    setApiToken(token);
+  }, [session]);
+  return null;
+}
 
 function makeQueryClient(): QueryClient {
   return new QueryClient({
@@ -36,6 +48,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
 
   return (
     <SessionProvider>
+      <AuthSync />
       <QueryClientProvider client={queryClient}>
         <ThemeProvider
           attribute="class"

@@ -7,6 +7,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { getSolutions, generateSolutions, submitVote } from '@/lib/api';
+import CommentThread from '@/components/problems/CommentThread';
 import { useToast } from '@/components/ui/toast';
 import { renderMarkdown, cn, formatNumber } from '@/lib/utils';
 import type { AIProvider, Solution } from '@/types';
@@ -169,6 +170,9 @@ function SolutionContent({
           />
         </div>
       </div>
+
+      {/* Comments */}
+      <CommentThread solutionId={solution.id} />
     </div>
   );
 }

@@ -8,7 +8,12 @@ _redis: Optional[aioredis.Redis] = None
 async def get_redis() -> aioredis.Redis:
     global _redis
     if _redis is None:
-        _redis = aioredis.from_url(settings.REDIS_URL, encoding="utf-8", decode_responses=True)
+        url = settings.REDIS_URL
+        # Upstash requires TLS — treat redis:// pointing to upstash as rediss://
+        if "upstash.io" in url and url.startswith("redis://"):
+            url = url.replace("redis://", "rediss://", 1)
+        ssl_opts = {"ssl_cert_reqs": None} if url.startswith("rediss://") else {}
+        _redis = aioredis.from_url(url, encoding="utf-8", decode_responses=True, **ssl_opts)
     return _redis
 
 async def cache_get(key: str) -> Optional[Any]:

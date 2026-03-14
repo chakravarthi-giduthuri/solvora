@@ -32,8 +32,11 @@ celery_app = Celery(
     broker=_celery_redis_url,
     backend="cache+memory://",
     include=[
+        "app.scrapers.tasks",
         "app.nlp.tasks",
         "app.ai.tasks",
+        "app.content.tasks",
+        "app.notifications.tasks",
     ],
 )
 
@@ -65,6 +68,18 @@ celery_app.conf.update(
         "batch-generate-viral-hourly": {
             "task": "ai.batch_generate_for_viral_posts",
             "schedule": crontab(minute=0),
+        },
+        "select-potd-daily": {
+            "task": "content.select_potd",
+            "schedule": crontab(hour=0, minute=5),
+        },
+        "auto-tag-problems-every-30min": {
+            "task": "content.auto_tag_problems",
+            "schedule": crontab(minute="*/30"),
+        },
+        "send-digests-hourly": {
+            "task": "notifications.send_weekly_digests",
+            "schedule": crontab(minute=5),
         },
     },
 )

@@ -208,6 +208,14 @@ def run_hn_scrape(db_session: Session, settings: Any) -> dict[str, int]:
         db_session, posts, platform="hackernews"
     )
 
+    if inserted > 0:
+        try:
+            import redis as sync_redis
+            r = sync_redis.from_url(settings.REDIS_URL, decode_responses=True, ssl_cert_reqs=None)
+            r.incr("sse:new_problem_count", inserted)
+        except Exception as exc:
+            logger.warning("HN scrape: SSE counter update failed", error=str(exc))
+
     logger.info(
         "HN scrape finished",
         fetched=fetched,

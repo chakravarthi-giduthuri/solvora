@@ -9,7 +9,7 @@ from starlette.middleware.base import BaseHTTPMiddleware
 from app.core.config import settings
 from app.core.database import engine, Base
 from app.core.limiter import limiter
-from app.api.v1 import problems, solutions, analytics, categories, auth, votes, bookmarks, internal
+from app.api.v1 import problems, solutions, analytics, categories, auth, votes, bookmarks, internal, tags, filter_presets, stream, comments, profiles, leaderboard, export, notifications, admin, submit_problems
 
 
 class SecurityHeadersMiddleware(BaseHTTPMiddleware):
@@ -57,7 +57,7 @@ def create_app() -> FastAPI:
         CORSMiddleware,
         allow_origins=settings.CORS_ORIGINS,
         allow_credentials=True,
-        allow_methods=["GET", "POST", "DELETE", "OPTIONS"],
+        allow_methods=["GET", "POST", "DELETE", "PATCH", "PUT", "OPTIONS"],
         allow_headers=["Authorization", "Content-Type", "X-Requested-With"],
     )
 
@@ -69,6 +69,16 @@ def create_app() -> FastAPI:
     app.include_router(votes.router, prefix="/api/v1/votes", tags=["votes"])
     app.include_router(bookmarks.router, prefix="/api/v1/bookmarks", tags=["bookmarks"])
     app.include_router(internal.router, prefix="/api/v1/internal", tags=["internal"])
+    app.include_router(tags.router, prefix="/api/v1/tags", tags=["tags"])
+    app.include_router(filter_presets.router, prefix="/api/v1/filter-presets", tags=["filter-presets"])
+    app.include_router(stream.router, prefix="/api/v1/stream", tags=["stream"])
+    app.include_router(comments.router, prefix="/api/v1/solutions", tags=["comments"])
+    app.include_router(profiles.router, prefix="/api/v1/profiles", tags=["profiles"])
+    app.include_router(leaderboard.router, prefix="/api/v1/leaderboard", tags=["leaderboard"])
+    app.include_router(export.router, prefix="/api/v1/problems", tags=["export"])
+    app.include_router(notifications.router, prefix="/api/v1/notifications", tags=["notifications"])
+    app.include_router(admin.router, prefix="/api/v1/admin", tags=["admin"])
+    app.include_router(submit_problems.router, prefix="/api/v1/submit", tags=["submit"])
 
     @app.get("/health")
     async def health():

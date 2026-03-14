@@ -83,11 +83,13 @@ const authOptions: NextAuthOptions = {
       // Google sign in — exchange Google token for backend JWT if needed
       if (account?.provider === 'google' && account.id_token) {
         try {
-          const response = await axios.post<{ access_token: string }>
-            (`${API_URL}/auth/google`, { id_token: account.id_token });
+          const response = await axios.post<{ access_token: string }>(
+            `${API_URL}/auth/google-id-token`,
+            { id_token: account.id_token },
+          );
           token.accessToken = response.data.access_token;
         } catch {
-          // Fall back to using Google session without backend token
+          // Fall back — user will need email/password for authenticated actions
         }
       }
 

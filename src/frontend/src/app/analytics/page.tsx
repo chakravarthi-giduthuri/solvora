@@ -1,6 +1,8 @@
 'use client';
 
+import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
+import { useSession } from 'next-auth/react';
 import { Navbar } from '@/components/layout/Navbar';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
@@ -11,7 +13,7 @@ import {
   CheckCircle2,
   Layers,
 } from 'lucide-react';
-import { getDashboardAnalytics } from '@/lib/api';
+import apiClient, { getDashboardAnalytics, getCustomAnalytics, exportAnalyticsUrl } from '@/lib/api';
 import {
   PieChart,
   Pie,
@@ -307,6 +309,129 @@ function Dashboard({ data }: { data: DashboardAnalytics }) {
   );
 }
 
+// ─── Custom Date Range Panel ──────────────────────────────────────────────────
+
+function CustomDateRangePanel() {
+  const { data: session } = useSession();
+  const [dateFrom, setDateFrom] = useState('');
+  const [dateTo, setDateTo] = useState('');
+  const [customData, setCustomData] = useState<{
+    total_problems?: number;
+    by_platform?: Record<string, number>;
+    by_category?: Record<string, number>;
+  } | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+
+  const handleFetch = async () => {
+    if (!dateFrom || !dateTo) { setError('Please select both dates'); return; }
+    setError('');
+    setLoading(true);
+    try {
+      const result = await getCustomAnalytics(dateFrom, dateTo);
+      setCustomData(result);
+    } catch (e: unknown) {
+      setError((e as Error).message || 'Failed to fetch analytics');
+    }
+    setLoading(false);
+  };
+
+  const handleExport = () => {
+    if (!session || !dateFrom || !dateTo) return;
+    const url = exportAnalyticsUrl(dateFrom, dateTo);
+    apiClient.get(url, { responseType: 'blob' })
+      .then(res => {
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(res.data as Blob);
+        a.download = `solvora-analytics-${dateFrom}-${dateTo}.csv`;
+        a.click();
+      })
+      .catch(() => setError('Export failed'));
+  };
+
+  return (
+    <Card className="mb-6">
+      <CardHeader className="pb-3">
+        <CardTitle className="text-base">Custom Date Range</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <div className="flex flex-wrap gap-3 items-end mb-4">
+          <div>
+            <label className="block text-xs text-muted-foreground mb-1">From</label>
+            <input
+              type="date"
+              value={dateFrom}
+              onChange={e => setDateFrom(e.target.value)}
+              className="p-2 border border-border rounded-lg text-sm bg-background text-foreground"
+            />
+          </div>
+          <div>
+            <label className="block text-xs text-muted-foreground mb-1">To</label>
+            <input
+              type="date"
+              value={dateTo}
+              onChange={e => setDateTo(e.target.value)}
+              className="p-2 border border-border rounded-lg text-sm bg-background text-foreground"
+            />
+          </div>
+          <button
+            onClick={handleFetch}
+            disabled={loading}
+            className="px-4 py-2 bg-primary text-primary-foreground text-sm rounded-lg hover:opacity-90 disabled:opacity-50"
+          >
+            {loading ? 'Loading...' : 'Analyze'}
+          </button>
+          {session && (
+            <button
+              onClick={handleExport}
+              disabled={!dateFrom || !dateTo}
+              className="px-4 py-2 bg-emerald-600 text-white text-sm rounded-lg hover:bg-emerald-700 disabled:opacity-50"
+            >
+              Export CSV
+            </button>
+          )}
+        </div>
+        {error && <p className="text-sm text-destructive">{error}</p>}
+
+        {customData && (
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mt-4">
+            <div className="p-4 bg-muted rounded-xl">
+              <p className="text-3xl font-bold tabular-nums">{customData.total_problems ?? 0}</p>
+              <p className="text-sm text-muted-foreground mt-1">Total Problems</p>
+            </div>
+            {customData.by_platform && Object.keys(customData.by_platform).length > 0 && (
+              <div className="p-4 bg-muted rounded-xl col-span-2">
+                <p className="text-sm font-medium mb-2">By Platform</p>
+                <div className="space-y-1">
+                  {Object.entries(customData.by_platform).map(([platform, count]) => (
+                    <div key={platform} className="flex justify-between text-sm">
+                      <span className="capitalize text-muted-foreground">{platform}</span>
+                      <span className="font-medium">{count}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+            {customData.by_category && Object.keys(customData.by_category).length > 0 && (
+              <div className="p-4 bg-muted rounded-xl col-span-3">
+                <p className="text-sm font-medium mb-2">By Category</p>
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+                  {Object.entries(customData.by_category).map(([cat, count]) => (
+                    <div key={cat} className="flex justify-between text-sm p-2 bg-card rounded-lg">
+                      <span className="capitalize text-muted-foreground">{cat}</span>
+                      <span className="font-medium">{count}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function AnalyticsPage() {
@@ -325,6 +450,7 @@ export default function AnalyticsPage() {
             <BarChart2 className="h-6 w-6 text-primary" />
             <h1 className="text-2xl font-bold">Analytics</h1>
           </div>
+          <CustomDateRangePanel />
           {isLoading && <DashboardSkeleton />}
           {isError && (
             <div className="py-12 text-center text-muted-foreground">

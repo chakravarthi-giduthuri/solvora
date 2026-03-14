@@ -276,6 +276,14 @@ def run_reddit_scrape(db_session: Session, settings: Any) -> dict[str, int]:
     fetched = len(posts)
     inserted, skipped = BaseScraper._save_posts(db_session, posts, platform="reddit")
 
+    if inserted > 0:
+        try:
+            import redis as sync_redis
+            r = sync_redis.from_url(settings.REDIS_URL, decode_responses=True, ssl_cert_reqs=None)
+            r.incr("sse:new_problem_count", inserted)
+        except Exception as exc:
+            logger.warning("Reddit scrape: SSE counter update failed", error=str(exc))
+
     logger.info(
         "Reddit scrape finished",
         fetched=fetched,

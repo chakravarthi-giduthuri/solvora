@@ -18,6 +18,12 @@ async def get_user_by_email(db: AsyncSession, email: str) -> User | None:
     return result.scalar_one_or_none()
 
 
+def _is_admin_email(email: str) -> bool:
+    from app.core.config import settings  # noqa: PLC0415
+    admin_list = [e.strip().lower() for e in settings.ADMIN_EMAILS.split(",") if e.strip()]
+    return email.lower() in admin_list
+
+
 async def create_user(db: AsyncSession, user_create: UserCreate) -> User:
     existing = await get_user_by_email(db, user_create.email)
     if existing:
@@ -27,6 +33,7 @@ async def create_user(db: AsyncSession, user_create: UserCreate) -> User:
         name=user_create.name,
         hashed_password=get_password_hash(user_create.password),
         auth_provider="email",
+        is_admin=_is_admin_email(user_create.email),
     )
     db.add(user)
     await db.commit()
@@ -41,6 +48,11 @@ async def authenticate_user(db: AsyncSession, email: str, password: str) -> User
     is_valid = verify_password(password, hash_to_check)
     if not user or not user.hashed_password or not is_valid:
         return None
+    # Promote to admin on login if email is in the admin list
+    if _is_admin_email(user.email) and not getattr(user, 'is_admin', False):
+        user.is_admin = True
+        await db.commit()
+        await db.refresh(user)
     return user
 
 
@@ -82,8 +94,14 @@ async def get_or_create_google_user(db: AsyncSession, google_user: dict) -> User
             email=email,
             name=google_user.get("name", email.split("@")[0]),
             auth_provider="google",
+            is_admin=_is_admin_email(email),
         )
         db.add(user)
+        await db.commit()
+        await db.refresh(user)
+    elif _is_admin_email(email) and not getattr(user, 'is_admin', False):
+        # Promote existing user if their email is in the admin list
+        user.is_admin = True
         await db.commit()
         await db.refresh(user)
     return user

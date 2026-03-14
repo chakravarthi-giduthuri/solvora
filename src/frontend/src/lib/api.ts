@@ -214,4 +214,127 @@ export async function getDashboardAnalytics(): Promise<DashboardAnalytics> {
   return response.data;
 }
 
+// ─── Autocomplete ──────────────────────────────────────────────────────────────
+
+export async function getAutocomplete(q: string): Promise<string[]> {
+  const response = await apiClient.get<string[]>(
+    `/problems/autocomplete?q=${encodeURIComponent(q)}`,
+  );
+  return response.data;
+}
+
+// ─── Problem of the Day ────────────────────────────────────────────────────────
+
+export async function getPotd(): Promise<Problem | null> {
+  const response = await apiClient.get<Problem | null>('/problems/potd');
+  return response.data ?? null;
+}
+
+// ─── Share ─────────────────────────────────────────────────────────────────────
+
+export async function trackShare(problemId: string): Promise<void> {
+  await apiClient.post(`/problems/${problemId}/share`);
+}
+
+// ─── Tags ──────────────────────────────────────────────────────────────────────
+
+export async function searchTags(q: string): Promise<unknown[]> {
+  const response = await apiClient.get(`/tags?q=${encodeURIComponent(q)}`);
+  return response.data as unknown[];
+}
+
+export async function getProblemTags(problemId: string): Promise<unknown[]> {
+  const response = await apiClient.get(`/tags/problem/${problemId}`);
+  return response.data as unknown[];
+}
+
+export async function addProblemTags(problemId: string, tags: string[]): Promise<void> {
+  await apiClient.post(`/tags/problem/${problemId}`, { tags });
+}
+
+// ─── Filter Presets ────────────────────────────────────────────────────────────
+
+export async function getFilterPresets(): Promise<unknown[]> {
+  const response = await apiClient.get('/filter-presets');
+  return response.data as unknown[];
+}
+
+export async function createFilterPreset(name: string, filters: object): Promise<unknown> {
+  const response = await apiClient.post('/filter-presets', { name, filters });
+  return response.data;
+}
+
+export async function deleteFilterPreset(id: string): Promise<void> {
+  await apiClient.delete(`/filter-presets/${id}`);
+}
+
+// ─── Comments ─────────────────────────────────────────────────────────────────
+
+export const getComments = async (solutionId: string) => {
+  const response = await apiClient.get(`/solutions/${solutionId}/comments`);
+  return response.data;
+};
+
+export const createComment = async (solutionId: string, body: string, parentId?: string | null) => {
+  const response = await apiClient.post(`/solutions/${solutionId}/comments`, { body, parent_id: parentId ?? null });
+  return response.data;
+};
+
+export const deleteComment = async (commentId: string) => {
+  await apiClient.delete(`/comments/${commentId}`);
+};
+
+// ─── Profiles ─────────────────────────────────────────────────────────────────
+
+export const getProfile = async (username: string) => {
+  const response = await apiClient.get(`/profiles/${username}`);
+  return response.data;
+};
+
+export const getMyProfile = async () => {
+  const response = await apiClient.get('/profiles/me');
+  return response.data;
+};
+
+export const updateProfile = async (data: { bio?: string; avatar_url?: string; username?: string }) => {
+  const response = await apiClient.put('/profiles/me', data);
+  return response.data;
+};
+
+// ─── Leaderboard ──────────────────────────────────────────────────────────────
+
+export const getLeaderboard = async (type = 'problems', period = '7d') => {
+  const response = await apiClient.get(`/leaderboard?type=${type}&period=${period}`);
+  return response.data;
+};
+
+// ─── Submit Problem ───────────────────────────────────────────────────────────
+
+export const submitProblem = async (data: { title: string; body: string; category?: string; tags?: string[] }) => {
+  const response = await apiClient.post('/submit', data);
+  return response.data;
+};
+
+// ─── Analytics Custom + Export ────────────────────────────────────────────────
+
+export const getCustomAnalytics = async (dateFrom: string, dateTo: string) => {
+  const response = await apiClient.get(`/analytics/custom?date_from=${dateFrom}&date_to=${dateTo}`);
+  return response.data;
+};
+
+export const exportAnalyticsUrl = (dateFrom: string, dateTo: string) =>
+  `${process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000/api/v1'}/analytics/export?date_from=${dateFrom}&date_to=${dateTo}`;
+
+// ─── Notification Preferences ─────────────────────────────────────────────────
+
+export const getNotificationPrefs = async () => {
+  const response = await apiClient.get('/notifications/prefs');
+  return response.data;
+};
+
+export const updateNotificationPrefs = async (data: object) => {
+  const response = await apiClient.put('/notifications/prefs', data);
+  return response.data;
+};
+
 export default apiClient;

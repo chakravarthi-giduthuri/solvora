@@ -67,3 +67,37 @@ async def logout(
 @router.get("/me", response_model=UserResponse)
 async def get_me(current_user: User = Depends(get_current_user)):
     return UserResponse.model_validate(current_user)
+
+
+from pydantic import BaseModel as _BaseModel
+
+
+class GoogleIdTokenBody(_BaseModel):
+    id_token: str
+
+
+@router.post("/google-id-token", response_model=Token)
+async def google_id_token_login(body: GoogleIdTokenBody, db: AsyncSession = Depends(get_db)):
+    """Verify a Google id_token and return a backend JWT. Used by NextAuth server-side callback."""
+    import httpx
+    async with httpx.AsyncClient() as hclient:
+        r = await hclient.get(
+            "https://oauth2.googleapis.com/tokeninfo",
+            params={"id_token": body.id_token},
+            timeout=10,
+        )
+    if r.status_code != 200:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid Google token")
+
+    info = r.json()
+    email = info.get("email")
+    if not email:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="No email in Google token")
+
+    name = info.get("name") or email.split("@")[0]
+    avatar = info.get("picture")
+
+    google_user_data = {"email": email, "name": name, "avatar_url": avatar}
+    user = await get_or_create_google_user(db, google_user_data)
+    token = create_access_token({"sub": user.id})
+    return Token(access_token=token, user=UserResponse.model_validate(user))

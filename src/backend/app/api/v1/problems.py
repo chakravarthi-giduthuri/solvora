@@ -119,6 +119,87 @@ async def get_trending(
     return JSONResponse(content=topics)
 
 
+@router.get("/autocomplete", response_model=None)
+async def autocomplete_problems(
+    q: str = Query("", min_length=0),
+    db: AsyncSession = Depends(get_db),
+):
+    if len(q.strip()) < 2:
+        return JSONResponse(content={"suggestions": []})
+    cache_key = f"autocomplete:{hashlib.md5(q.lower().strip().encode()).hexdigest()}"
+    cached = await cache_get(cache_key)
+    if cached:
+        return JSONResponse(content=cached)
+    result = await db.execute(
+        select(Problem.title).where(
+            Problem.title.ilike(f"%{q}%"),
+            Problem.is_active == True
+        ).distinct().limit(10)
+    )
+    suggestions = [row[0] for row in result.fetchall()]
+    data = {"suggestions": suggestions}
+    await cache_set(cache_key, data, ttl=300)
+    return JSONResponse(content=data)
+
+
+@router.get("/potd", response_model=None)
+async def get_potd(db: AsyncSession = Depends(get_db)):
+    from datetime import date as date_type, timedelta, timezone as tz
+    today = date_type.today().isoformat()
+    cache_key = f"potd:{today}"
+    cached = await cache_get(cache_key)
+    if cached:
+        return JSONResponse(content=cached)
+    result = await db.execute(
+        select(Problem).where(
+            Problem.potd_date == date_type.today(),
+            Problem.is_active == True
+        ).options(selectinload(Problem.solutions)).limit(1)
+    )
+    problem = result.scalar_one_or_none()
+    if not problem:
+        # No POTD set for today — auto-select the highest-upvoted active problem
+        # and mark it as today's POTD so it persists for the rest of the day.
+        fallback = await db.execute(
+            select(Problem).where(
+                Problem.is_active == True,
+                Problem.is_problem == True,
+                Problem.potd_date == None,
+            ).options(selectinload(Problem.solutions))
+            .order_by(Problem.upvotes.desc(), Problem.comment_count.desc())
+            .limit(1)
+        )
+        problem = fallback.scalar_one_or_none()
+        if problem:
+            problem.potd_date = date_type.today()
+            await db.commit()
+            await db.refresh(problem)
+    if not problem:
+        data = {"potd": None}
+    else:
+        data = {"potd": ProblemResponse.model_validate(problem).model_dump(mode='json', by_alias=True)}
+    from datetime import datetime, timezone as tz2
+    now = datetime.now(tz2.utc)
+    midnight = datetime(now.year, now.month, now.day, tzinfo=tz2.utc)
+    from datetime import timedelta
+    midnight += timedelta(days=1)
+    ttl = int((midnight - now).total_seconds())
+    await cache_set(cache_key, data, ttl=ttl)
+    return JSONResponse(content=data)
+
+
+@router.post("/{problem_id}/share", response_model=None)
+@limiter.limit("10/minute")
+async def track_share(request: Request, problem_id: str, db: AsyncSession = Depends(get_db)):
+    result = await db.execute(select(Problem).where(Problem.id == problem_id))
+    problem = result.scalar_one_or_none()
+    if not problem:
+        raise HTTPException(status_code=404, detail="Problem not found")
+    problem.share_count = (problem.share_count or 0) + 1
+    await db.commit()
+    return JSONResponse(content={"share_count": problem.share_count})
+
+
 @router.get("/{problem_id}", response_model=None)
 async def get_problem(problem_id: str, db: AsyncSession = Depends(get_db)):
     cache_key = f"problem:{problem_id}"

@@ -11,6 +11,9 @@ import { Navbar } from '@/components/layout/Navbar';
 import { SolutionTabs } from '@/components/problems/SolutionTabs';
 import { ProblemCard } from '@/components/dashboard/ProblemCard';
 import { PrintButton } from '@/components/problems/PrintButton';
+import { ShareButtons } from '@/components/problems/ShareButtons';
+import ExportMenu from '@/components/problems/ExportMenu';
+import { TagList } from '@/components/dashboard/TagList';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -33,13 +36,31 @@ export async function generateMetadata({
   params,
 }: ProblemPageProps): Promise<Metadata> {
   try {
-    const problem = await getProblem(params.id);
+    const res = await fetch(
+      `${process.env.NEXT_PUBLIC_API_URL}/problems/${params.id}`,
+      { next: { revalidate: 300 } },
+    );
+    if (!res.ok) return { title: 'Problem | Solvora' };
+    const problem = await res.json();
+    const desc: string = problem.summary || (problem.body ?? '').slice(0, 160);
     return {
-      title: problem.title,
-      description: (problem.body ?? '').slice(0, 160),
+      title: `${problem.title} | Solvora`,
+      description: desc,
+      openGraph: {
+        title: problem.title,
+        description: desc,
+        url: `${process.env.NEXTAUTH_URL}/problems/${params.id}`,
+        siteName: 'Solvora',
+        type: 'article',
+      },
+      twitter: {
+        card: 'summary_large_image',
+        title: problem.title,
+        description: desc,
+      },
     };
   } catch {
-    return { title: 'Problem Details' };
+    return { title: 'Problem | Solvora' };
   }
 }
 
@@ -132,6 +153,16 @@ export default async function ProblemPage({ params }: ProblemPageProps) {
                     {problem.title}
                   </CardTitle>
 
+                  {/* Share + Export buttons */}
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <ShareButtons
+                      title={problem.title}
+                      url=""
+                      problemId={problem.id}
+                    />
+                    <ExportMenu problemId={problem.id} />
+                  </div>
+
                   {/* Stats row */}
                   <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground mt-2">
                     <span className="flex items-center gap-1">
@@ -174,6 +205,11 @@ export default async function ProblemPage({ params }: ProblemPageProps) {
                       ))}
                     </div>
                   )}
+
+                  {/* Dynamic tags with edit support */}
+                  <div className="mt-3">
+                    <TagList problemId={problem.id} editable />
+                  </div>
 
                   {/* Actions */}
                   <div className="flex gap-3 mt-4 pt-4 border-t">

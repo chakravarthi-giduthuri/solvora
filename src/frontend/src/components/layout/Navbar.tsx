@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { signOut, useSession } from 'next-auth/react';
-import { Brain, Sun, Moon, LogOut, User, Bookmark, BarChart2, LayoutDashboard } from 'lucide-react';
+import { Brain, Sun, Moon, LogOut, User, Bookmark, BarChart2, LayoutDashboard, Trophy, PlusCircle, Bell, Shield } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import {
@@ -21,6 +21,7 @@ import { cn } from '@/lib/utils';
 
 const NAV_LINKS = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
+  { href: '/leaderboard', label: 'Leaderboard', icon: Trophy },
   { href: '/analytics', label: 'Analytics', icon: BarChart2 },
   { href: '/bookmarks', label: 'Bookmarks', icon: Bookmark },
 ] as const;
@@ -85,6 +86,15 @@ export function Navbar() {
 
         {/* Right actions */}
         <div className="flex items-center gap-2 ml-auto shrink-0">
+          {/* Submit Problem button — visible when logged in */}
+          {(displayUser || isAuthenticated) && (
+            <Button asChild size="sm" variant="default" className="hidden sm:flex gap-1.5">
+              <Link href="/problems/submit">
+                <PlusCircle className="h-4 w-4" />
+                Submit
+              </Link>
+            </Button>
+          )}
           {/* Dark mode toggle */}
           <Button
             variant="ghost"
@@ -134,9 +144,28 @@ export function Navbar() {
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem asChild>
+                  <Link href="/problems/submit">
+                    <PlusCircle className="mr-2 h-4 w-4" />
+                    Submit Problem
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild>
                   <Link href="/bookmarks">
                     <Bookmark className="mr-2 h-4 w-4" />
                     Bookmarks
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                  <Link href="/settings/notifications">
+                    <Bell className="mr-2 h-4 w-4" />
+                    Notifications
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem asChild>
+                  <Link href="/admin" className="text-purple-600 dark:text-purple-400">
+                    <Shield className="mr-2 h-4 w-4" />
+                    Admin Panel
                   </Link>
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
@@ -161,13 +190,13 @@ export function Navbar() {
       </div>
 
       {/* Mobile nav */}
-      <nav className="flex md:hidden border-t px-4 py-2 gap-1">
+      <nav className="flex md:hidden border-t px-4 py-2 gap-1 overflow-x-auto">
         {NAV_LINKS.map(({ href, label, icon: Icon }) => (
           <Link
             key={href}
             href={href}
             className={cn(
-              'flex flex-1 items-center justify-center gap-1.5 py-1.5 rounded-md text-xs font-medium transition-colors',
+              'flex flex-1 items-center justify-center gap-1.5 py-1.5 rounded-md text-xs font-medium transition-colors shrink-0',
               pathname.startsWith(href)
                 ? 'bg-accent text-accent-foreground'
                 : 'text-muted-foreground hover:text-foreground',
@@ -177,6 +206,20 @@ export function Navbar() {
             {label}
           </Link>
         ))}
+        {(displayUser || isAuthenticated) && (
+          <Link
+            href="/problems/submit"
+            className={cn(
+              'flex flex-1 items-center justify-center gap-1.5 py-1.5 rounded-md text-xs font-medium transition-colors shrink-0',
+              pathname === '/problems/submit'
+                ? 'bg-accent text-accent-foreground'
+                : 'text-muted-foreground hover:text-foreground',
+            )}
+          >
+            <PlusCircle className="h-4 w-4" aria-hidden="true" />
+            Submit
+          </Link>
+        )}
       </nav>
     </header>
   );

@@ -18,16 +18,17 @@ async def test_signup_creates_user(client: AsyncClient) -> None:
     payload = {
         "email": "newuser@example.com",
         "password": "StrongPassword123!",
-        "full_name": "New User",
+        "name": "New User",
     }
 
     response = await client.post("/api/v1/auth/signup", json=payload)
 
     assert response.status_code in (200, 201)
     data = response.json()
-    assert data["email"] == payload["email"]
-    assert "password" not in data
-    assert "hashed_password" not in data
+    assert "access_token" in data
+    assert data["user"]["email"] == payload["email"]
+    assert "password" not in data["user"]
+    assert "hashed_password" not in data["user"]
 
 
 async def test_signup_duplicate_email_returns_409(client: AsyncClient) -> None:
@@ -35,7 +36,7 @@ async def test_signup_duplicate_email_returns_409(client: AsyncClient) -> None:
     payload = {
         "email": "duplicate@example.com",
         "password": "AnotherPassword1!",
-        "full_name": "First User",
+        "name": "First User",
     }
     await client.post("/api/v1/auth/signup", json=payload)
 
@@ -55,8 +56,7 @@ async def test_login_returns_token(
     """POST /auth/login with valid credentials returns an access token."""
     response = await client.post(
         "/api/v1/auth/login",
-        data={"username": sample_user.email, "password": "correct-password"},
-        headers={"Content-Type": "application/x-www-form-urlencoded"},
+        json={"email": sample_user.email, "password": "Correct-Password1!"},
     )
 
     assert response.status_code == 200
@@ -73,8 +73,7 @@ async def test_login_wrong_password_returns_401(
     """POST /auth/login with an incorrect password returns HTTP 401."""
     response = await client.post(
         "/api/v1/auth/login",
-        data={"username": sample_user.email, "password": "wrong-password"},
-        headers={"Content-Type": "application/x-www-form-urlencoded"},
+        json={"email": sample_user.email, "password": "Wrong-Password1!"},
     )
 
     assert response.status_code == 401
@@ -85,8 +84,7 @@ async def test_login_unknown_email_returns_401(client: AsyncClient) -> None:
     """POST /auth/login with an email that does not exist returns HTTP 401."""
     response = await client.post(
         "/api/v1/auth/login",
-        data={"username": "nobody@example.com", "password": "whatever"},
-        headers={"Content-Type": "application/x-www-form-urlencoded"},
+        json={"email": "nobody@example.com", "password": "Whatever1!"},
     )
 
     assert response.status_code == 401
@@ -111,8 +109,7 @@ async def test_me_returns_user_when_authenticated(
     # Obtain a token first
     login_response = await client.post(
         "/api/v1/auth/login",
-        data={"username": sample_user.email, "password": "correct-password"},
-        headers={"Content-Type": "application/x-www-form-urlencoded"},
+        json={"email": sample_user.email, "password": "Correct-Password1!"},
     )
     assert login_response.status_code == 200
     token = login_response.json()["access_token"]

@@ -28,6 +28,8 @@ class Settings(BaseSettings):
     CORS_ORIGINS: List[str] = ["http://localhost:3000"]
     ENVIRONMENT: str = "development"
     INTERNAL_API_KEY: str = "change-me-internal-key"
+    # Comma-separated emails that are always granted is_admin=True on login/signup
+    ADMIN_EMAILS: str = ""
 
     @field_validator("SECRET_KEY", "INTERNAL_API_KEY")
     @classmethod
