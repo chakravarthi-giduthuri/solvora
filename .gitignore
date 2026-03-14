@@ -63,7 +63,8 @@ htmlcov/
 logs/
 
 # Docs working files
-Dashboard/
+/Dashboard/
+!src/
 *.png
 *.docx
 s2.png
