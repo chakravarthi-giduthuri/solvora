@@ -45,19 +45,28 @@ async def list_problems(
     if cached:
         return JSONResponse(content=cached)
 
+    from sqlalchemy import exists, cast
+    from sqlalchemy.types import Date as SADate
+    from app.models.problem import Solution
+
     filters = [Problem.is_active == True]
     if platform:
         filters.append(Problem.platform == platform)
     if category:
-        # Match by category name or slug
         filters.append(Problem.category == category)
     if sentiment:
         filters.append(Problem.sentiment == sentiment)
+    if date_from:
+        filters.append(cast(Problem.created_at, SADate) >= date_from)
+    if date_to:
+        filters.append(cast(Problem.created_at, SADate) <= date_to)
     if search:
         filters.append(or_(
             Problem.title.ilike(f"%{search}%"),
             Problem.body.ilike(f"%{search}%")
         ))
+    if has_solution is True:
+        filters.append(exists().where(Solution.problem_id == Problem.id))
 
     count_q = select(func.count()).select_from(Problem).where(and_(*filters))
     total = (await db.execute(count_q)).scalar_one()
@@ -75,11 +84,6 @@ async def list_problems(
         q = q.order_by(Problem.created_at.desc())
 
     q = q.offset(offset).limit(per_page)
-
-    if has_solution is True:
-        from sqlalchemy import exists
-        from app.models.problem import Solution
-        q = q.where(exists().where(Solution.problem_id == Problem.id))
 
     result = await db.execute(q)
     problems = result.scalars().all()

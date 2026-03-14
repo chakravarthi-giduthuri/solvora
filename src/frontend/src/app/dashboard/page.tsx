@@ -1,17 +1,15 @@
-import type { Metadata } from 'next';
+'use client';
+
 import Link from 'next/link';
 import { FilterSidebar } from '@/components/dashboard/FilterSidebar';
 import { ProblemFeed } from '@/components/dashboard/ProblemFeed';
 import { TrendingTopics } from '@/components/dashboard/TrendingTopics';
 import { NewProblemsBanner } from '@/components/dashboard/NewProblemsBanner';
 import { ProblemOfTheDay } from '@/components/dashboard/ProblemOfTheDay';
-
-export const metadata: Metadata = {
-  title: 'Dashboard — Solvora',
-  description: 'Browse and filter AI-aggregated community problems',
-};
+import { useFilterStore } from '@/store/filterStore';
 
 export default function DashboardPage() {
+  const { sortBy, setFilter } = useFilterStore();
   return (
     <div>
       <NewProblemsBanner />
@@ -31,6 +29,15 @@ export default function DashboardPage() {
               <h1 className="text-xl font-bold">Problems Feed</h1>
 
               <div className="flex items-center gap-2">
+                <select
+                  value={sortBy}
+                  onChange={(e) => setFilter('sortBy', e.target.value as 'recent' | 'upvotes' | 'comments')}
+                  className="text-sm rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="recent">Latest</option>
+                  <option value="upvotes">Top Voted</option>
+                  <option value="comments">Most Discussed</option>
+                </select>
                 <Link
                   href="/leaderboard"
                   className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-lg border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
