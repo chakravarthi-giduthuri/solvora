@@ -1,4 +1,4 @@
-export type Platform = 'reddit' | 'hackernews';
+export type Platform = 'reddit' | 'hackernews' | 'user';
 
 export type Sentiment = 'urgent' | 'frustrated' | 'curious' | 'neutral';
 
